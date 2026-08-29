@@ -127,7 +127,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
 import org.springframework.web.bind.annotation.*;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 import java.math.BigDecimal;
 
@@ -164,10 +163,11 @@ public class ReservationController {
         );
     }
 
-   
+    // GET RESERVATIONS
+    // ADMIN -> all reservations
+    // USER -> only own reservations
     @GetMapping
-    public ResponseEntity<Page<ReservationResponse>>
-    getAllReservations(
+    public ResponseEntity<Page<ReservationResponse>> getReservations(
 
             @RequestParam(required = false)
             ReservationStatus status,
@@ -185,7 +185,9 @@ public class ReservationController {
             int size,
 
             @RequestParam(required = false)
-            String sort
+            String sort,
+
+            Authentication authentication
     ) {
 
         Pageable pageable;
@@ -196,8 +198,7 @@ public class ReservationController {
 
             String field = sortParts[0];
 
-            Sort.Direction direction =
-                    Sort.Direction.ASC;
+            Sort.Direction direction = Sort.Direction.ASC;
 
             if (sortParts.length > 1 &&
                     sortParts[1].equalsIgnoreCase("desc")) {
@@ -219,8 +220,19 @@ public class ReservationController {
             );
         }
 
+        String username = authentication.getName();
+
+        boolean isAdmin =
+                authentication.getAuthorities()
+                        .stream()
+                        .anyMatch(authority ->
+                                authority.getAuthority()
+                                        .equals("ROLE_ADMIN"));
+
         Page<ReservationResponse> reservations =
-                reservationService.getAllReservations(
+                reservationService.getReservations(
+                        username,
+                        isAdmin,
                         status,
                         minPrice,
                         maxPrice,
@@ -230,13 +242,12 @@ public class ReservationController {
         return ResponseEntity.ok(reservations);
     }
 
-   
+    // GET MY RESERVATIONS
     @GetMapping("/my")
     public ResponseEntity<?> getMyReservations(
             Authentication authentication) {
 
-        String username =
-                authentication.getName();
+        String username = authentication.getName();
 
         return ResponseEntity.ok(
                 reservationService.getUserReservations(
@@ -245,15 +256,15 @@ public class ReservationController {
         );
     }
 
-  
+    // GET RESERVATION BY ID
+    // ADMIN -> any reservation
+    // USER -> own reservation only
     @GetMapping("/{id}")
-    public ResponseEntity<ReservationResponse>
-    getReservationById(
+    public ResponseEntity<ReservationResponse> getReservationById(
             @PathVariable Long id,
             Authentication authentication) {
 
-        String username =
-                authentication.getName();
+        String username = authentication.getName();
 
         boolean isAdmin =
                 authentication.getAuthorities()
@@ -271,20 +282,25 @@ public class ReservationController {
 
         return ResponseEntity.ok(response);
     }
-    
 
-@PutMapping("/{id}")
-public ResponseEntity<ReservationResponse> updateReservation(
-        @PathVariable Long id,
-        @Valid @RequestBody ReservationUpdateRequest request) {
+    // UPDATE RESERVATION
+    // ADMIN only through SecurityConfig
+    @PutMapping("/{id}")
+    public ResponseEntity<ReservationResponse> updateReservation(
+            @PathVariable Long id,
+            @Valid @RequestBody ReservationUpdateRequest request) {
 
-    ReservationResponse response =
-            reservationService.updateReservation(id, request);
+        ReservationResponse response =
+                reservationService.updateReservation(
+                        id,
+                        request
+                );
 
-    return ResponseEntity.ok(response);
-}
+        return ResponseEntity.ok(response);
+    }
 
-
+    // DELETE RESERVATION
+    // ADMIN only through SecurityConfig
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteReservation(
             @PathVariable Long id) {
@@ -294,3 +310,4 @@ public ResponseEntity<ReservationResponse> updateReservation(
         return ResponseEntity.noContent().build();
     }
 }
+

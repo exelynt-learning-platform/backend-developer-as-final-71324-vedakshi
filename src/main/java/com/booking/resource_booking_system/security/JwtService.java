@@ -2,6 +2,7 @@ package com.booking.resource_booking_system.security;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
@@ -11,10 +12,11 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    private final String secretKey =
-            "mySecretKeyForResourceBookingSystem123456789";
+    @Value("${jwt.secret}")
+    private String secretKey;
 
-    private final long expirationTime = 1000 * 60 * 60;
+    @Value("${jwt.expiration}")
+    private long expirationTime;
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(
@@ -24,16 +26,16 @@ public class JwtService {
 
     public String generateToken(String username, String role) {
 
-    return Jwts.builder()
-            .subject(username)
-            .claim("role", role)
-            .issuedAt(new Date())
-            .expiration(
-                    new Date(System.currentTimeMillis() + expirationTime)
-            )
-            .signWith(getSigningKey())
-            .compact();
-}
+        return Jwts.builder()
+                .subject(username)
+                .claim("role", role)
+                .issuedAt(new Date())
+                .expiration(
+                        new Date(System.currentTimeMillis() + expirationTime)
+                )
+                .signWith(getSigningKey())
+                .compact();
+    }
 
     public String extractUsername(String token) {
 
@@ -52,3 +54,4 @@ public class JwtService {
         return tokenUsername.equals(username);
     }
 }
+
