@@ -1,110 +1,3 @@
-// package com.booking.resource_booking_system.controller;
-
-// import com.booking.resource_booking_system.dto.ReservationRequest;
-// import com.booking.resource_booking_system.dto.ReservationResponse;
-// import com.booking.resource_booking_system.service.ReservationService;
-
-// import jakarta.validation.Valid;
-// import org.springframework.http.HttpStatus;
-// import org.springframework.http.ResponseEntity;
-// import org.springframework.security.core.Authentication;
-// import org.springframework.web.bind.annotation.*;
-
-// import java.util.List;
-
-// @RestController
-// @RequestMapping("/reservations")
-// public class ReservationController {
-
-//     private final ReservationService reservationService;
-
-//     public ReservationController(ReservationService reservationService) {
-//         this.reservationService = reservationService;
-//     }
-
-//     // CREATE RESERVATION
-//     // USER identity comes from JWT
-//     @PostMapping
-//     public ResponseEntity<ReservationResponse> createReservation(
-//             @Valid @RequestBody ReservationRequest request,
-//             Authentication authentication) {
-
-//         String username = authentication.getName();
-
-//         ReservationResponse response =
-//                 reservationService.createReservation(
-//                         request,
-//                         username
-//                 );
-
-//         return new ResponseEntity<>(
-//                 response,
-//                 HttpStatus.CREATED
-//         );
-//     }
-
-//     // GET ALL RESERVATIONS
-//     // ADMIN only
-//     @GetMapping
-//     public ResponseEntity<List<ReservationResponse>> getAllReservations() {
-
-//         List<ReservationResponse> reservations =
-//                 reservationService.getAllReservations();
-
-//         return ResponseEntity.ok(reservations);
-//     }
-
-//     // GET MY RESERVATIONS
-//     @GetMapping("/my")
-//     public ResponseEntity<List<ReservationResponse>> getMyReservations(
-//             Authentication authentication) {
-
-//         String username = authentication.getName();
-
-//         List<ReservationResponse> reservations =
-//                 reservationService.getUserReservations(username);
-
-//         return ResponseEntity.ok(reservations);
-//     }
-
-//     // GET RESERVATION BY ID
-//     // ADMIN can view any reservation
-//     // USER can view only their own reservation
-//     @GetMapping("/{id}")
-//     public ResponseEntity<ReservationResponse> getReservationById(
-//             @PathVariable Long id,
-//             Authentication authentication) {
-
-//         String username = authentication.getName();
-
-//         boolean isAdmin =
-//                 authentication.getAuthorities()
-//                         .stream()
-//                         .anyMatch(authority ->
-//                                 authority.getAuthority()
-//                                         .equals("ROLE_ADMIN"));
-
-//         ReservationResponse response =
-//                 reservationService.getReservationById(
-//                         id,
-//                         username,
-//                         isAdmin
-//                 );
-
-//         return ResponseEntity.ok(response);
-//     }
-
-//     // DELETE RESERVATION
-//     // ADMIN only
-//     @DeleteMapping("/{id}")
-//     public ResponseEntity<Void> deleteReservation(
-//             @PathVariable Long id) {
-
-//         reservationService.deleteReservation(id);
-
-//         return ResponseEntity.noContent().build();
-//     }
-// }
 package com.booking.resource_booking_system.controller;
 
 import com.booking.resource_booking_system.dto.ReservationRequest;
@@ -188,37 +81,58 @@ public class ReservationController {
             String sort,
 
             Authentication authentication
-    ) {
-
+    ){ 
         Pageable pageable;
 
-        if (sort != null && !sort.isBlank()) {
+    if (page < 0) {
+     throw new IllegalArgumentException("Page number cannot be negative");
+    }
 
-            String[] sortParts = sort.split(",");
+    if (size <= 0) {
+        throw new IllegalArgumentException("Page size must be greater than zero");
+    }
 
-            String field = sortParts[0];
+    if (sort != null && !sort.isBlank()) {
 
-            Sort.Direction direction = Sort.Direction.ASC;
+        String[] sortParts = sort.split(",");
 
-            if (sortParts.length > 1 &&
-                    sortParts[1].equalsIgnoreCase("desc")) {
+        String field = sortParts[0].trim(); 
 
-                direction = Sort.Direction.DESC;
-            }
+            if (!field.equals("id")
+            && !field.equals("startTime")
+            && !field.equals("endTime")
+            && !field.equals("price")
+            && !field.equals("status")) {
 
-            pageable = PageRequest.of(
-                    page,
-                    size,
-                    Sort.by(direction, field)
-            );
+        throw new IllegalArgumentException(
+                "Invalid sort field: " + field
+        );
+    }
 
-        } else {
+    Sort.Direction direction = Sort.Direction.ASC;
 
-            pageable = PageRequest.of(
-                    page,
-                    size
+    if (sortParts.length > 1) {
+
+        if (sortParts[1].equalsIgnoreCase("desc")) {
+            direction = Sort.Direction.DESC;
+
+        } else if (!sortParts[1].equalsIgnoreCase("asc")) {
+            throw new IllegalArgumentException(
+                    "Sort direction must be asc or desc"
             );
         }
+    }
+
+    pageable = PageRequest.of(
+            page,
+            size,
+            Sort.by(direction, field)
+        );
+
+    } else {
+
+    pageable = PageRequest.of(page, size);
+}
 
         String username = authentication.getName();
 
